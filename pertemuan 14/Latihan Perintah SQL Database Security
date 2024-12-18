@@ -1,0 +1,92 @@
+-- 1. Membuat Database untuk Pengingat Aktivitas
+CREATE DATABASE pengingat_aktivitas;
+
+-- 2. Menggunakan Database Baru
+USE pengingat_aktivitas;
+
+-- 3. Membuat Tabel Pengguna
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    password VARCHAR(255)
+);
+
+-- 4. Membuat Tabel Pengingat Aktivitas
+CREATE TABLE activity_reminders (
+    reminder_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    activity_name VARCHAR(255) NOT NULL,  -- Nama aktivitas seperti "Rapat Tim", "Latihan Olahraga", dll.
+    reminder_time DATETIME NOT NULL,      -- Waktu pengingat untuk aktivitas, format YYYY-MM-DD HH:MM:SS
+    is_completed BOOLEAN DEFAULT FALSE,  -- Status apakah aktivitas telah selesai atau belum
+    notes TEXT,                           -- Catatan tambahan, misalnya "Bawa dokumen penting" atau "Persiapkan peralatan"
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 5. Membuat Tabel Roles
+CREATE TABLE roles (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,
+    role_name VARCHAR(255) NOT NULL UNIQUE, -- Nama peran seperti "ibu", "user", atau "admin"
+    description TEXT                        -- Deskripsi peran, misalnya "Hak akses penuh untuk mengelola pengingat" atau "Pengguna biasa dengan akses terbatas"
+);
+
+-- 6. Membuat Tabel Relasi antara Users dan Roles
+CREATE TABLE users_roles (
+    user_id INT,
+    role_id INT,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
+);
+
+-- 7. Menambahkan Pengguna
+INSERT INTO users (username, email, password)
+VALUES 
+    ('bu_maya', 'bu.maya@example.com', 'hashed_password'),
+    ('anak_budi', 'anak.budi@example.com', 'hashed_password');
+
+-- 8. Menambahkan Roles
+INSERT INTO roles (role_name, description)
+VALUES 
+    ('ibu', 'Peran ibu dengan hak penuh untuk mengelola pengingat'),
+    ('user', 'Pengguna biasa dengan hak akses terbatas');
+
+-- 9. Menghubungkan Pengguna dengan Roles
+INSERT INTO users_roles (user_id, role_id)
+VALUES 
+    ((SELECT user_id FROM users WHERE username = 'bu_maya'), 
+     (SELECT role_id FROM roles WHERE role_name = 'ibu')),
+    ((SELECT user_id FROM users WHERE username = 'anak_budi'), 
+     (SELECT role_id FROM roles WHERE role_name = 'user'));
+
+-- 10. Menambahkan Pengingat Aktivitas untuk Pengguna
+INSERT INTO activity_reminders (user_id, activity_name, reminder_time, notes)
+VALUES 
+    ((SELECT user_id FROM users WHERE username = 'bu_maya'), 
+     'Rapat Bulanan', '2024-12-20 10:00:00', 'Diskusi rencana kerja'),
+    ((SELECT user_id FROM users WHERE username = 'anak_budi'), 
+     'Latihan Sepak Bola', '2024-12-21 16:00:00', 'Bawa perlengkapan lengkap');
+
+-- 11. Menampilkan Pengingat untuk Pengguna Tertentu
+SELECT * FROM activity_reminders
+WHERE user_id = (SELECT user_id FROM users WHERE username = 'bu_maya');
+
+-- 12. Menandai Aktivitas sebagai Selesai
+UPDATE activity_reminders
+SET is_completed = TRUE
+WHERE reminder_id = 1; -- Ganti dengan ID yang sesuai
+
+-- 13. Membuat Pengguna untuk Database Baru
+CREATE USER 'bu_maya'@'localhost' IDENTIFIED BY 'password_bu_maya';
+CREATE USER 'anak_budi'@'localhost' IDENTIFIED BY 'password_anak_budi';
+
+-- 14. Memberikan Hak Akses
+GRANT SELECT, INSERT, UPDATE, DELETE ON pengingat_aktivitas.activity_reminders TO 'bu_maya'@'localhost';
+GRANT SELECT ON pengingat_aktivitas.activity_reminders TO 'anak_budi'@'localhost';
+
+-- 15. Menyegarkan Hak Akses
+FLUSH PRIVILEGES;
+
+-- 16. Menampilkan Hak Akses yang Dimiliki oleh Pengguna
+SHOW GRANTS FOR 'bu_maya'@'localhost';
+SHOW GRANTS FOR 'anak_budi'@'localhost';
